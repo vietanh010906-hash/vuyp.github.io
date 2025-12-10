@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chuyên Gia Động Cơ: Hệ Thống Ôn Tập Chẩn Đoán & Kết Cấu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f5f5f4; /* Stone-100 */ color: #292524; /* Stone-800 */ }
+        
+        /* Chart Container Styles - Mandatory */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        /* Flow Path Animations */
+        .flow-path { transition: all 0.5s ease; opacity: 0.3; border: 2px solid #e5e7eb; }
+        .flow-path.active { opacity: 1; border-color: #3b82f6; background-color: #eff6ff; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
+        .flow-path.active-red { opacity: 1; border-color: #ef4444; background-color: #fef2f2; }
+        .flow-path.active-dirty { opacity: 1; border-color: #78350f; background-color: #fef3c7; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e7e5e4; }
+        ::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #78716c; }
+
+        .tab-btn.active { background-color: #292524; color: white; border-left: 4px solid #f59e0b; }
+        .component-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    </style>
+    <!-- Chosen Palette: Warm Neutral (Stone) base with Amber (Warning), Blue (Fluids), Red (Heat), Green (Eco) accents. -->
+    <!-- Application Structure Plan: 
+         1. Sidebar Navigation: Categorized into 'Core Mechanics', 'Fluid Systems', 'Fuel & Control', and 'Future Trends' for logical grouping.
+         2. Dashboard Home: Quick summary stats and a global 'Diagnostic Search' tool to simulate a mechanic's first step.
+         3. Interactive Modules:
+            - Mechanical Core: Interactive cards for parts (Crank, Piston, Valvetrain) detailing failures.
+            - Fluid Systems: Simulation sliders for Cooling (Temp) and Toggles for Lubrication (Pressure/Clogs) to visualize flow logic.
+            - Fuel System: Radar chart comparing Carb vs EFI to visualize trade-offs. Diagram of EFI sensors.
+            - Future Trends: Card-based info on 2025 tech.
+         4. Justification: This structure moves from 'Identifying the problem' (Diagnostics) to 'Understanding the System' (Simulation/Logic) to 'Evolution' (Trends), mimicking a learning curve.
+    -->
+    <!-- Visualization & Content Choices:
+         - Radar Chart (Chart.js): Comparing Carburetor vs EFI. Goal: Compare. Justification: Multi-variable comparison (cost, maintenance, power) is best seen radially.
+         - Interactive Flow Blocks (HTML/CSS): Lubrication & Cooling paths. Goal: Change/Process. Justification: Changing CSS classes based on sliders/buttons is lighter and more responsive than complex canvas animations for simple flow logic.
+         - Diagnostic Filter Table (JS): Goal: Organize/Search. Justification: Quick lookup for symptoms mentioned in the report (knock, smoke).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="h-screen flex overflow-hidden text-sm md:text-base">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-stone-200 flex-shrink-0 hidden md:flex flex-col z-10">
+        <div class="p-6 border-b border-stone-100">
+            <h1 class="font-bold text-xl text-stone-800 tracking-tight"><i class="fas fa-wrench text-amber-600 mr-2"></i>Kỹ Thuật Động Cơ</h1>
+            <p class="text-xs text-stone-500 mt-1">Ôn tập chuyên sâu & Chẩn đoán</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto p-4 space-y-2">
+            <button onclick="app.navigate('dashboard')" class="tab-btn active w-full text-left px-4 py-3 rounded-lg font-medium transition-all hover:bg-stone-100 flex items-center">
+                <i class="fas fa-tachometer-alt w-6 text-center mr-2"></i> Tổng Quan
+            </button>
+            
+            <div class="pt-4 pb-1 text-xs font-bold text-stone-400 uppercase tracking-wider px-4">Cơ Khí & Chẩn Đoán</div>
+            <button onclick="app.navigate('mechanics')" class="tab-btn w-full text-left px-4 py-3 rounded-lg font-medium text-stone-600 transition-all hover:bg-stone-100 flex items-center">
+                <i class="fas fa-cogs w-6 text-center mr-2"></i> Phát Lực & Phân Phối Khí
+            </button>
+
+            <div class="pt-4 pb-1 text-xs font-bold text-stone-400 uppercase tracking-wider px-4">Hệ Thống Phụ Trợ</div>
+            <button onclick="app.navigate('fluids')" class="tab-btn w-full text-left px-4 py-3 rounded-lg font-medium text-stone-600 transition-all hover:bg-stone-100 flex items-center">
+                <i class="fas fa-tint w-6 text-center mr-2"></i> Bôi Trơn & Làm Mát
+            </button>
+            <button onclick="app.navigate('fuel')" class="tab-btn w-full text-left px-4 py-3 rounded-lg font-medium text-stone-600 transition-all hover:bg-stone-100 flex items-center">
+                <i class="fas fa-gas-pump w-6 text-center mr-2"></i> Hệ Thống Nhiên Liệu
+            </button>
+
+            <div class="pt-4 pb-1 text-xs font-bold text-stone-400 uppercase tracking-wider px-4">Tương Lai</div>
+            <button onclick="app.navigate('trends')" class="tab-btn w-full text-left px-4 py-3 rounded-lg font-medium text-stone-600 transition-all hover:bg-stone-100 flex items-center">
+                <i class="fas fa-leaf w-6 text-center mr-2"></i> Xu Hướng 2025
+            </button>
+        </nav>
+        <div class="p-4 border-t border-stone-200 text-xs text-stone-400 text-center">
+            Dữ liệu nguồn: Tài liệu Ôn tập f736...
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col bg-stone-50 overflow-hidden relative">
+        <!-- Mobile Header -->
+        <header class="md:hidden bg-white border-b border-stone-200 p-4 flex justify-between items-center z-20 shadow-sm">
+            <h1 class="font-bold text-lg text-stone-800">Kỹ Thuật Động Cơ</h1>
+            <button id="mobile-menu-toggle" class="text-stone-600"><i class="fas fa-bars text-xl"></i></button>
+        </header>
+
+        <!-- Dynamic Views -->
+        <div id="content-area" class="flex-1 overflow-y-auto p-4 md:p-8">
+            <!-- Content injected by JS -->
+        </div>
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const app = {
+            state: {
+                currentView: 'dashboard',
+                coolingTemp: 60,
+                oilCondition: 'normal'
+            },
+            
+            data: {
+                diagnostics: [
+                    { sym: "Tiếng gõ trầm, nặng (Rod Knock)", cause: "Khe hở bạc biên quá lớn.", fix: "Gõ rõ nhất khi chịu tải nặng/thốc ga. Tần số tăng theo tua máy.", area: "mechanics" },
+                    { sym: "Tiếng gõ đanh, sắc (Piston Slap)", cause: "Khe hở piston-xi lanh lớn (mòn).", fix: "Rõ khi máy nguội, giảm khi nóng.", area: "mechanics" },
+                    { sym: "Tiếng gõ như búa gõ đe (Pin Knock)", cause: "Lỏng ắc piston (bạc đầu nhỏ).", fix: "Rõ nhất ở garanti hoặc khi thả ga.", area: "mechanics" },
+                    { sym: "Rung giật dữ dội", cause: "Mất cân bằng động (cong tay biên), bỏ máy.", fix: "Rung truyền lên khung xe, vô lăng.", area: "mechanics" },
+                    { sym: "Khói xả màu xanh", cause: "Lọt nhớt buồng đốt (xéc-măng mòn, hở phớt gits).", fix: "Hao nhớt, bugi đen ướt.", area: "mechanics" },
+                    { sym: "Tiếng 'lách cách' nắp máy", cause: "Khe hở nhiệt xupap lớn.", fix: "Kêu đều, rõ khi máy nguội.", area: "mechanics" },
+                    { sym: "Nổ ngược đường nạp (Backfire)", cause: "Xupap nạp hở, sai lửa.", fix: "Tiếng 'bụp bụp' ở bầu lọc gió.", area: "mechanics" },
+                    { sym: "Sôi nước, két nước nguội", cause: "Van hằng nhiệt kẹt đóng.", fix: "Đồng hồ nhiệt đỏ, ống nước trên nóng cứng.", area: "fluids" },
+                    { sym: "Dầu màu cà phê sữa", cause: "Nước lọt các-te (thổi gioăng).", fix: "Mất bôi trơn, sủi bọt khí bình nước phụ.", area: "fluids" },
+                    { sym: "Đèn Check Engine, tốn xăng", cause: "Cảm biến Oxy lỗi, ECU chạy Open Loop.", fix: "Xe chạy chế độ an toàn, đậm xăng.", area: "fuel" }
+                ],
+                efiComponents: [
+                    { id: "MAF", name: "Cảm biến Khí nạp (MAF/MAP)", role: "Đo lượng gió vào để tính lượng xăng cơ bản.", type: "sensor" },
+                    { id: "CKP", name: "Cảm biến Trục khuỷu (CKP)", role: "Xác định tốc độ và vị trí piston để phun đúng lúc.", type: "sensor" },
+                    { id: "ECU", name: "Bộ xử lý (ECU)", role: "Tính toán thời gian mở kim phun (Pulse Width).", type: "proc" },
+                    { id: "INJ", name: "Kim phun (Injector)", role: "Cơ cấu chấp hành: Phun tơi nhiên liệu.", type: "actuator" },
+                    { id: "O2S", name: "Cảm biến Oxy (O2S)", role: "Phản hồi nồng độ khí thải để tinh chỉnh xăng.", type: "sensor" }
+                ]
+            },
+
+            init: function() {
+                this.navigate('dashboard');
+                
+                // Mobile menu listener
+                document.getElementById('mobile-menu-toggle').addEventListener('click', () => {
+                    const aside = document.querySelector('aside');
+                    aside.classList.toggle('hidden');
+                    aside.classList.toggle('absolute');
+                    aside.classList.toggle('h-full');
+                    aside.classList.toggle('w-full');
+                });
+            },
+
+            navigate: function(viewId) {
+                this.state.currentView = viewId;
+                
+                // Update Sidebar UI
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-stone-800', 'text-white');
+                    btn.classList.add('text-stone-600');
+                    if (btn.getAttribute('onclick').includes(viewId)) {
+                        btn.classList.add('active');
+                        btn.classList.remove('text-stone-600');
+                    }
+                });
+
+                // Render Content
+                const contentArea = document.getElementById('content-area');
+                contentArea.innerHTML = ''; // Clear current
+
+                switch(viewId) {
+                    case 'dashboard': this.renderDashboard(contentArea); break;
+                    case 'mechanics': this.renderMechanics(contentArea); break;
+                    case 'fluids': this.renderFluids(contentArea); break;
+                    case 'fuel': this.renderFuel(contentArea); break;
+                    case 'trends': this.renderTrends(contentArea); break;
+                }
+                
+                // Re-initialize charts if needed
+                if(viewId === 'fuel') this.initFuelChart();
+            },
+
+            // --- VIEW RENDERERS ---
+
+            renderDashboard: function(target) {
+                target.innerHTML = `
+                    <div class="max-w-4xl mx-auto space-y-8 animate-fade-in">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-2xl font-bold text-stone-800 mb-2">Trung Tâm Chẩn Đoán & Ôn Tập</h2>
+                            <p class="text-stone-600">Chào mừng. Hệ thống này mô phỏng các tương tác vật lý bên trong động cơ đốt trong để hỗ trợ chẩn đoán hư hỏng.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-amber-50 p-6 rounded-xl border border-amber-100">
+                                <div class="text-amber-600 text-3xl mb-2"><i class="fas fa-fire"></i></div>
+                                <h3 class="font-bold text-stone-800">Hiệu Suất Nhiệt</h3>
+                                <p class="text-sm text-stone-600 mt-1">Diesel: 35-45% <br> Xăng: 25-30%</p>
+                            </div>
+                            <div class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                                <div class="text-blue-600 text-3xl mb-2"><i class="fas fa-temperature-high"></i></div>
+                                <h3 class="font-bold text-stone-800">Nhiệt Độ Vận Hành</h3>
+                                <p class="text-sm text-stone-600 mt-1">Lý tưởng: 80-95°C <br> Sôi: >110°C (có áp suất)</p>
+                            </div>
+                            <div class="bg-stone-100 p-6 rounded-xl border border-stone-200">
+                                <div class="text-stone-600 text-3xl mb-2"><i class="fas fa-globe"></i></div>
+                                <h3 class="font-bold text-stone-800">Thị Phần 2024</h3>
+                                <p class="text-sm text-stone-600 mt-1">Động cơ đốt trong vẫn chiếm ~85% vận tải toàn cầu.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h3 class="font-bold text-lg text-stone-800 mb-4"><i class="fas fa-search mr-2 text-stone-400"></i>Tra Cứu Nhanh Triệu Chứng</h3>
+                            <input type="text" id="diag-search" placeholder="Nhập hiện tượng (ví dụ: khói xanh, gõ, sôi nước...)" 
+                                   class="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none mb-4"
+                                   onkeyup="app.filterDiagnostics(this.value)">
+                            <div id="diag-results" class="space-y-2 max-h-60 overflow-y-auto">
+                                <!-- Results populated here -->
+                            </div>
+                        </div>
+                    </div>
+                `;
+                this.filterDiagnostics(''); // Init list
+            },
+
+            renderMechanics: function(target) {
+                target.innerHTML = `
+                    <div class="max-w-5xl mx-auto space-y-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-2xl font-bold text-stone-800 mb-4">Cơ Cấu Phát Lực & Phân Phối Khí</h2>
+                            <p class="text-stone-600 mb-6">Chẩn đoán dựa trên tiếng gõ và đặc điểm vận hành. Nhấp vào các bộ phận để xem chi tiết hư hỏng.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <!-- Crankshaft Card -->
+                                <div class="component-card bg-stone-50 p-5 rounded-lg border border-stone-200 cursor-pointer group" onclick="app.showPartDetail('crank')">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="font-bold text-stone-700">Trục Khuỷu</h3>
+                                        <i class="fas fa-circle-notch text-stone-400 group-hover:text-amber-500 transition"></i>
+                                    </div>
+                                    <p class="text-xs text-stone-500">Chịu tải trọng phức tạp nhất. Mòn Côn & Oval.</p>
+                                    <div class="mt-3 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 inline-block rounded">Bệnh: Gõ trầm, nặng</div>
+                                </div>
+
+                                <!-- Con Rod Card -->
+                                <div class="component-card bg-stone-50 p-5 rounded-lg border border-stone-200 cursor-pointer group" onclick="app.showPartDetail('rod')">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="font-bold text-stone-700">Thanh Truyền</h3>
+                                        <i class="fas fa-link text-stone-400 group-hover:text-amber-500 transition"></i>
+                                    </div>
+                                    <p class="text-xs text-stone-500">Cầu nối truyền lực. Dễ cong do thủy kích.</p>
+                                    <div class="mt-3 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 inline-block rounded">Bệnh: Gõ khi thốc ga</div>
+                                </div>
+
+                                <!-- Piston Card -->
+                                <div class="component-card bg-stone-50 p-5 rounded-lg border border-stone-200 cursor-pointer group" onclick="app.showPartDetail('piston')">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="font-bold text-stone-700">Piston & Xéc-măng</h3>
+                                        <i class="fas fa-compress-arrows-alt text-stone-400 group-hover:text-amber-500 transition"></i>
+                                    </div>
+                                    <p class="text-xs text-stone-500">Chịu nhiệt trực tiếp. Mòn rãnh, bó kẹt.</p>
+                                    <div class="mt-3 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 inline-block rounded">Bệnh: Khói xanh, hơi thừa</div>
+                                </div>
+
+                                <!-- Valvetrain Card -->
+                                <div class="component-card bg-stone-50 p-5 rounded-lg border border-stone-200 cursor-pointer group" onclick="app.showPartDetail('valve')">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="font-bold text-stone-700">Hệ Thống Xupap</h3>
+                                        <i class="fas fa-stopwatch text-stone-400 group-hover:text-amber-500 transition"></i>
+                                    </div>
+                                    <p class="text-xs text-stone-500">Điều khiển hô hấp. Khe hở nhiệt, sai cam.</p>
+                                    <div class="mt-3 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 inline-block rounded">Bệnh: Kêu lách cách</div>
+                                </div>
+                            </div>
+
+                            <div id="part-detail-panel" class="mt-8 p-6 bg-stone-800 text-stone-100 rounded-xl hidden animate-fade-in">
+                                <!-- JS populates this -->
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderFluids: function(target) {
+                target.innerHTML = `
+                    <div class="max-w-5xl mx-auto space-y-8">
+                        <!-- Lubrication System Simulation -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-xl font-bold text-stone-800 mb-4"><i class="fas fa-tint text-stone-600 mr-2"></i>Hệ Thống Bôi Trơn (Mô Phỏng Dòng Chảy)</h2>
+                            <p class="text-stone-600 text-sm mb-4">Điều chỉnh trạng thái để xem đường đi của dầu thay đổi như thế nào.</p>
+                            
+                            <div class="flex space-x-2 mb-6">
+                                <button onclick="app.setOilState('normal')" class="px-4 py-2 rounded-full text-xs font-bold bg-blue-100 text-blue-800 hover:bg-blue-200 transition">Bình thường</button>
+                                <button onclick="app.setOilState('high')" class="px-4 py-2 rounded-full text-xs font-bold bg-red-100 text-red-800 hover:bg-red-200 transition">Áp suất cao (Tua cao)</button>
+                                <button onclick="app.setOilState('clogged')" class="px-4 py-2 rounded-full text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">Tắc lọc dầu</button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center text-xs font-semibold relative p-4 bg-stone-50 rounded-xl border border-stone-200">
+                                <div class="md:col-span-1 p-3 bg-white border border-stone-300 rounded shadow-sm">Các-te (Bể dầu)</div>
+                                <div class="md:col-span-1 p-3 bg-white border border-stone-300 rounded shadow-sm">Bơm Dầu</div>
+                                <div class="md:col-span-2 grid grid-rows-2 gap-2">
+                                    <div id="flow-filter" class="flow-path p-3 rounded flex items-center justify-center">Lọc Tinh (Giấy Lọc)</div>
+                                    <div id="flow-bypass" class="flow-path p-3 rounded flex items-center justify-center">Van Bypass (Đi tắt)</div>
+                                </div>
+                                <div class="md:col-span-4 mt-2 p-3 bg-green-50 text-green-800 border border-green-200 rounded">Động Cơ (Trục khuỷu, Cam...)</div>
+                                
+                                <!-- Status Text -->
+                                <div id="oil-status-text" class="md:col-span-4 mt-2 text-stone-500 italic">Trạng thái: Chọn chế độ phía trên</div>
+                            </div>
+                        </div>
+
+                        <!-- Cooling System Simulation -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-xl font-bold text-stone-800 mb-4"><i class="fas fa-snowflake text-stone-600 mr-2"></i>Hệ Thống Làm Mát (Mô Phỏng Van Hằng Nhiệt)</h2>
+                            
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-stone-700 mb-2">Nhiệt độ nước làm mát: <span id="temp-display" class="font-bold text-blue-600">60°C</span></label>
+                                <input type="range" min="40" max="110" value="60" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer" oninput="app.updateCooling(this.value)">
+                                <div class="flex justify-between text-xs text-stone-400 mt-1">
+                                    <span>Khởi động (40°C)</span>
+                                    <span>Ổn định (85°C)</span>
+                                    <span>Sôi (110°C)</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col md:flex-row gap-6 items-center justify-center bg-stone-50 p-6 rounded-xl border border-stone-200">
+                                <div id="path-radiator" class="w-full md:w-1/3 p-4 text-center border-2 border-stone-200 rounded-lg transition-all opacity-30">
+                                    <i class="fas fa-fan text-2xl mb-2 block"></i>
+                                    Két Nước (Radiator)
+                                </div>
+                                <div class="text-2xl text-stone-300"><i class="fas fa-random"></i></div>
+                                <div id="path-bypass" class="w-full md:w-1/3 p-4 text-center border-2 border-stone-200 rounded-lg transition-all opacity-30">
+                                    <i class="fas fa-undo text-2xl mb-2 block"></i>
+                                    Đường Bypass (Về Bơm)
+                                </div>
+                            </div>
+                            <p id="cooling-desc" class="text-center mt-4 text-sm font-medium text-stone-600">Máy nguội: Nước chỉ tuần hoàn nội bộ để nóng nhanh.</p>
+                        </div>
+                    </div>
+                `;
+                this.updateCooling(60); // Init
+                this.setOilState('normal'); // Init
+            },
+
+            renderFuel: function(target) {
+                target.innerHTML = `
+                    <div class="max-w-5xl mx-auto space-y-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Comparison Chart -->
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100 flex flex-col">
+                                <h2 class="text-xl font-bold text-stone-800 mb-2">Chế Hòa Khí vs Phun Xăng (EFI)</h2>
+                                <p class="text-sm text-stone-500 mb-4">Tại sao công nghệ chuyển dịch sang EFI?</p>
+                                <div class="chart-container flex-1">
+                                    <canvas id="fuelChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- EFI Logic Map -->
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                                <h2 class="text-xl font-bold text-stone-800 mb-4">Sơ Đồ Nguyên Lý EFI</h2>
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                        <h3 class="font-bold text-blue-800 text-sm uppercase mb-2">1. Cảm Biến (Giác Quan)</h3>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${this.data.efiComponents.filter(c => c.type === 'sensor').map(c => 
+                                                `<span class="px-2 py-1 bg-white border border-blue-200 rounded text-xs cursor-help hover:bg-blue-100 transition" title="${c.role}">${c.id}</span>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex justify-center text-stone-400"><i class="fas fa-arrow-down"></i></div>
+
+                                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-100 text-center">
+                                        <h3 class="font-bold text-amber-800 text-sm uppercase mb-2">2. Bộ Xử Lý (Bộ Não)</h3>
+                                        <span class="px-4 py-2 bg-white border border-amber-200 rounded text-sm font-bold shadow-sm" title="Tính toán Pulse Width">ECU / ECM</span>
+                                    </div>
+
+                                    <div class="flex justify-center text-stone-400"><i class="fas fa-arrow-down"></i></div>
+
+                                    <div class="bg-red-50 p-3 rounded-lg border border-red-100">
+                                        <h3 class="font-bold text-red-800 text-sm uppercase mb-2">3. Chấp Hành (Cơ Bắp)</h3>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${this.data.efiComponents.filter(c => c.type === 'actuator').map(c => 
+                                                `<span class="px-2 py-1 bg-white border border-red-200 rounded text-xs cursor-help hover:bg-red-100 transition" title="${c.role}">${c.id}</span>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-stone-500 mt-4 italic">*Di chuột vào các mã linh kiện để xem chức năng.</p>
+                            </div>
+                        </div>
+
+                        <!-- Special Phenomena -->
+                        <div class="bg-stone-800 text-white p-6 rounded-xl">
+                            <h3 class="font-bold text-lg mb-2 text-amber-400"><i class="fas fa-flask mr-2"></i>Hiện Tượng Vật Lý Đặc Biệt</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                <div>
+                                    <h4 class="font-bold text-white border-b border-stone-600 pb-1 mb-2">Bám Vách (Wall-wetting)</h4>
+                                    <p class="text-sm text-stone-300">Xăng phun ra bám vào thành đường ống nạp tạo màng lỏng. Gây thiếu xăng khi tăng tốc đột ngột. <br><span class="text-amber-400">Khắc phục:</span> Kim phun đa lỗ, phun vào xupap nóng.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white border-b border-stone-600 pb-1 mb-2">Cắt nhiên liệu giảm tốc</h4>
+                                    <p class="text-sm text-stone-300">Khi thả trôi ở tua cao, ECU ngắt kim phun hoàn toàn. <br><span class="text-green-400">Lợi ích:</span> Tiết kiệm xăng 100% và tăng hiệu quả phanh động cơ.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderTrends: function(target) {
+                target.innerHTML = `
+                    <div class="max-w-4xl mx-auto space-y-8 animate-fade-in">
+                        <div class="text-center mb-8">
+                            <h2 class="text-3xl font-bold text-stone-800">Tương Lai Động Cơ Đốt Trong (2025+)</h2>
+                            <p class="text-stone-600 mt-2">Động cơ không "chết", nó đang tiến hóa để sinh tồn.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 hover:shadow-md transition">
+                                <h3 class="font-bold text-lg text-stone-800 mb-2">E-Fuel (Xăng Tổng Hợp)</h3>
+                                <p class="text-sm text-stone-600">Sản xuất từ CO2 thu hồi và Hydro điện phân. Trung hòa Carbon. Cho phép xe cũ chạy sạch mà không cần thay đổi phần cứng.</p>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 hover:shadow-md transition">
+                                <h3 class="font-bold text-lg text-stone-800 mb-2">Động Cơ Hydro (H2-ICE)</h3>
+                                <p class="text-sm text-stone-600">Đốt cháy khí Hydro trực tiếp. Giữ lại tiếng nổ và cảm xúc lái nhưng chỉ thải ra hơi nước. Toyota và Yamaha đang tiên phong.</p>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500 hover:shadow-md transition">
+                                <h3 class="font-bold text-lg text-stone-800 mb-2">Hybrid Hóa (HEV/PHEV)</h3>
+                                <p class="text-sm text-stone-600">Xu hướng chủ đạo. Động cơ điện gánh tải ở tua thấp (nơi ô nhiễm nhất), động cơ xăng chạy ở dải hiệu suất cao nhất.</p>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-stone-800 hover:shadow-md transition">
+                                <h3 class="font-bold text-lg text-stone-800 mb-2">Chuẩn Euro 7 (2025)</h3>
+                                <p class="text-sm text-stone-600">Quy định cực gắt về khí thải và cả bụi phanh/lốp. Buộc các hãng phải áp dụng công nghệ lọc xúc tác tiên tiến nhất.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // --- INTERACTIVITY FUNCTIONS ---
+
+            showPartDetail: function(partId) {
+                const panel = document.getElementById('part-detail-panel');
+                panel.classList.remove('hidden');
+                
+                let content = "";
+                if(partId === 'crank') {
+                    content = `
+                        <h3 class="text-xl font-bold text-amber-400 mb-2">Hư hỏng Trục Khuỷu</h3>
+                        <p class="mb-4">Chịu tải trọng động lớn nhất. Thường gặp:</p>
+                        <ul class="list-disc ml-5 space-y-2 text-sm text-stone-300">
+                            <li><strong>Mòn Oval:</strong> Do lực khí thể tác dụng chủ yếu theo phương đứng.</li>
+                            <li><strong>Mòn Côn:</strong> Do lực quán tính ly tâm và lực dẫn động phụ trợ.</li>
+                            <li><strong>Cong trục:</strong> Do quá nhiệt (bó biên) hoặc thủy kích.</li>
+                        </ul>
+                        <div class="mt-4 p-3 bg-stone-700 rounded border border-stone-600">
+                            <span class="text-amber-400 font-bold">Chẩn đoán:</span> Đèn áp suất nhớt nhấp nháy + Tiếng gõ trầm nặng theo nhịp tua máy.
+                        </div>
+                    `;
+                } else if(partId === 'rod') {
+                    content = `
+                        <h3 class="text-xl font-bold text-amber-400 mb-2">Hư hỏng Thanh Truyền</h3>
+                        <ul class="list-disc ml-5 space-y-2 text-sm text-stone-300">
+                            <li><strong>Cong thanh truyền:</strong> Điển hình của Thủy Kích (nước lọt buồng đốt). Piston bị chặn lại nhưng trục khuỷu vẫn quay đẩy thanh truyền cong đi.</li>
+                            <li><strong>Xoắn:</strong> Do bó kẹt bạc đầu to.</li>
+                        </ul>
+                         <div class="mt-4 p-3 bg-stone-700 rounded border border-stone-600">
+                            <span class="text-amber-400 font-bold">Chẩn đoán:</span> Rung giật dữ dội, gõ khi thốc ga, có thể lủng lốc máy nếu gãy.
+                        </div>
+                    `;
+                } else if(partId === 'piston') {
+                    content = `
+                        <h3 class="text-xl font-bold text-blue-400 mb-2">Hư hỏng Piston & Xéc-măng</h3>
+                        <ul class="list-disc ml-5 space-y-2 text-sm text-stone-300">
+                            <li><strong>Mòn rãnh xéc-măng:</strong> Gây va đập xéc-măng (ring flutter).</li>
+                            <li><strong>Hàn dính (Scuffing):</strong> Do quá nhiệt phá vỡ màng dầu.</li>
+                        </ul>
+                        <div class="mt-4 p-3 bg-stone-700 rounded border border-stone-600">
+                            <span class="text-blue-400 font-bold">Chẩn đoán:</span> Khói xanh (ăn nhớt), Hơi thừa (Blow-by) phụt ra nắp nhớt. Tiếng gõ đanh khi máy nguội.
+                        </div>
+                    `;
+                } else if(partId === 'valve') {
+                    content = `
+                        <h3 class="text-xl font-bold text-amber-400 mb-2">Hư hỏng Phân Phối Khí</h3>
+                        <ul class="list-disc ml-5 space-y-2 text-sm text-stone-300">
+                            <li><strong>Cháy xupap xả:</strong> Do khe hở nhiệt quá nhỏ (bị đội), xupap không đóng kín, khí cháy thổi qua.</li>
+                            <li><strong>Hở phớt gits:</strong> Dầu chảy dọc thân xupap vào buồng đốt.</li>
+                        </ul>
+                        <div class="mt-4 p-3 bg-stone-700 rounded border border-stone-600">
+                            <span class="text-amber-400 font-bold">Chẩn đoán:</span> Khói xanh khi khởi động (phớt gits). Tiếng lách cách đều (khe hở lớn). Nổ lụp bụp ống xả (xupap hở).
+                        </div>
+                    `;
+                }
+                panel.innerHTML = content;
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            },
+
+            setOilState: function(mode) {
+                // Reset styling
+                document.getElementById('flow-filter').className = 'flow-path p-3 rounded flex items-center justify-center';
+                document.getElementById('flow-bypass').className = 'flow-path p-3 rounded flex items-center justify-center';
+                
+                const statusText = document.getElementById('oil-status-text');
+
+                if(mode === 'normal') {
+                    document.getElementById('flow-filter').classList.add('active');
+                    statusText.innerText = "Bình thường: Dầu đi qua lọc tinh -> Sạch sẽ vào động cơ.";
+                } else if(mode === 'high') {
+                    document.getElementById('flow-filter').classList.add('active');
+                    statusText.innerText = "Áp suất cao: Van điều áp mở xả bớt dầu về các-te để bảo vệ đường ống.";
+                } else if(mode === 'clogged') {
+                    document.getElementById('flow-filter').classList.add('active-dirty'); // Red visual for clog
+                    document.getElementById('flow-bypass').classList.add('active-red');
+                    statusText.innerHTML = "<span class='text-red-600 font-bold'>Nguy hiểm:</span> Lọc tắc. Van Bypass mở cho dầu bẩn đi tắt vào động cơ để tránh bó máy.";
+                }
+            },
+
+            updateCooling: function(val) {
+                const tempDisp = document.getElementById('temp-display');
+                const pathRad = document.getElementById('path-radiator');
+                const pathBypass = document.getElementById('path-bypass');
+                const desc = document.getElementById('cooling-desc');
+
+                tempDisp.innerText = val + "°C";
+                
+                if (val < 75) {
+                    // Cold
+                    tempDisp.className = "font-bold text-blue-600";
+                    pathRad.classList.remove('opacity-100', 'border-blue-500', 'bg-blue-50');
+                    pathRad.classList.add('opacity-30');
+                    
+                    pathBypass.classList.add('opacity-100', 'border-amber-500', 'bg-amber-50');
+                    pathBypass.classList.remove('opacity-30');
+                    desc.innerText = "Van hằng nhiệt ĐÓNG: Nước tuần hoàn nội bộ (Bypass) để động cơ nóng nhanh.";
+                } else if (val >= 75 && val < 90) {
+                    // Normal
+                    tempDisp.className = "font-bold text-green-600";
+                    pathRad.classList.add('opacity-100', 'border-blue-500', 'bg-blue-50');
+                    pathRad.classList.remove('opacity-30');
+                    
+                    pathBypass.classList.add('opacity-50'); // Partially open logic simulation
+                    desc.innerText = "Van hằng nhiệt MỞ MỘT PHẦN: Pha trộn nước nóng và lạnh để ổn định nhiệt.";
+                } else {
+                    // Hot
+                    tempDisp.className = "font-bold text-red-600";
+                    pathRad.classList.add('opacity-100', 'border-red-500', 'bg-red-100');
+                    pathBypass.classList.remove('opacity-100', 'border-amber-500', 'bg-amber-50');
+                    pathBypass.classList.add('opacity-30');
+                    desc.innerText = "Van hằng nhiệt MỞ HOÀN TOÀN: Toàn bộ nước ra két để giải nhiệt tối đa.";
+                }
+            },
+
+            filterDiagnostics: function(query) {
+                const container = document.getElementById('diag-results');
+                if(!container) return;
+                
+                container.innerHTML = '';
+                const q = query.toLowerCase();
+                
+                const filtered = this.data.diagnostics.filter(d => 
+                    d.sym.toLowerCase().includes(q) || d.cause.toLowerCase().includes(q)
+                );
+
+                if(filtered.length === 0) {
+                    container.innerHTML = '<div class="text-stone-400 italic">Không tìm thấy kết quả.</div>';
+                    return;
+                }
+
+                filtered.forEach(d => {
+                    const el = document.createElement('div');
+                    el.className = 'p-3 bg-stone-50 rounded border border-stone-200 hover:bg-stone-100 transition cursor-pointer';
+                    el.innerHTML = `<div class="font-bold text-stone-800">${d.sym}</div><div class="text-xs text-stone-600">Nguyên nhân: ${d.cause}</div>`;
+                    el.onclick = () => app.navigate(d.area);
+                    container.appendChild(el);
+                });
+            },
+
+            initFuelChart: function() {
+                const ctx = document.getElementById('fuelChart');
+                if(!ctx) return;
+                
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Chính xác tỷ lệ', 'Tăng tốc (Đáp ứng)', 'Khởi động lạnh', 'Dễ bảo dưỡng', 'Thân thiện môi trường'],
+                        datasets: [{
+                            label: 'Phun Xăng (EFI)',
+                            data: [95, 90, 95, 40, 90],
+                            fill: true,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgb(59, 130, 246)',
+                            pointBackgroundColor: 'rgb(59, 130, 246)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(59, 130, 246)'
+                        }, {
+                            label: 'Chế Hòa Khí (Carb)',
+                            data: [60, 50, 40, 90, 40],
+                            fill: true,
+                            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                            borderColor: 'rgb(245, 158, 11)',
+                            pointBackgroundColor: 'rgb(245, 158, 11)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(245, 158, 11)'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        elements: { line: { borderWidth: 3 } },
+                        scales: {
+                            r: {
+                                angleLines: { display: true },
+                                suggestedMin: 0,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Initialize app on load
+        window.onload = function() {
+            app.init();
+        };
+    </script>
+</body>
+</html>
